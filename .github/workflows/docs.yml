@@ -1,0 +1,31 @@
+# Dogfooding: every Monday (or on demand) ChangeScribe writes the last sprint's
+# changelog and opens a pull request with the update.
+name: Update changelog
+on:
+  schedule: [{ cron: "0 6 * * 1" }]
+  workflow_dispatch:
+    inputs:
+      since: { description: "Look-back window", default: "14d" }
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: ./
+        with:
+          since: ${{ github.event.inputs.since || '14d' }}
+          release: Unreleased
+          changelog: CHANGELOG.md
+          readme: README.md
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+      - uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "docs: update changelog (ChangeScribe)"
+          title: "docs: sprint changelog update"
+          body: "Automatically generated from commit and PR history by ChangeScribe."
+          branch: changescribe/changelog
+          labels: documentation

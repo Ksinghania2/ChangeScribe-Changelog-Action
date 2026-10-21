@@ -1,0 +1,48 @@
+name: "ChangeScribe"
+description: "Generate a human-readable changelog / README section from commits and merged PRs."
+branding:
+  icon: file-text
+  color: purple
+inputs:
+  since:
+    description: "Look-back window (14d, 2w, ISO date)"
+    default: "14d"
+  release:
+    description: "Heading for the generated section"
+    default: "Unreleased"
+  changelog:
+    description: "Changelog file to update ('' to skip)"
+    default: "CHANGELOG.md"
+  readme:
+    description: "README to refresh the managed block in ('' to skip)"
+    default: ""
+  backend:
+    description: "auto | anthropic | heuristic"
+    default: "auto"
+  anthropic-api-key:
+    description: "API key for the LLM writer (optional)"
+    required: false
+  github-token:
+    description: "Token used to read PRs and comments"
+    default: ${{ github.token }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Install ChangeScribe
+      shell: bash
+      run: pip install requests flask
+    - name: Generate documentation
+      shell: bash
+      env:
+        PYTHONPATH: ${{ github.action_path }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        ARGS=(generate --github "${{ github.repository }}" --since "${{ inputs.since }}" \
+              --release "${{ inputs.release }}" --backend "${{ inputs.backend }}")
+        [ -n "${{ inputs.changelog }}" ] && ARGS+=(--changelog "${{ inputs.changelog }}")
+        [ -n "${{ inputs.readme }}" ] && ARGS+=(--readme "${{ inputs.readme }}")
+        python -m changescribe "${ARGS[@]}"

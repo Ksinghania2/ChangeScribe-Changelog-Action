@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "changescribe"
+version = "1.0.0"
+description = "Generate human-readable changelogs and README updates from git commit and pull-request history."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Kshitij Singhania" }]
+dependencies = ["requests>=2.31", "flask>=3.0"]
+
+[project.optional-dependencies]
+serve = ["gunicorn>=21.2"]
+dev = ["pytest>=8.0", "matplotlib>=3.8"]
+
+[project.scripts]
+changescribe = "changescribe.cli:main"
+
+[tool.setuptools]
+packages = ["changescribe"]
+
+[tool.setuptools.package-data]
+changescribe = ["templates/*.html"]

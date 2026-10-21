@@ -1,0 +1,80 @@
+{
+  "commits_total": 40,
+  "commits_kept": 30,
+  "noise_precision": 1.0,
+  "noise_recall": 1.0,
+  "classification_accuracy": 0.867,
+  "accuracy_conventional": 1.0,
+  "n_conventional": 10,
+  "accuracy_freeform": 0.8,
+  "n_freeform": 20,
+  "macro_f1": 0.954,
+  "per_category": {
+    "feature": {
+      "precision": 1.0,
+      "recall": 0.714,
+      "f1": 0.833,
+      "support": 7
+    },
+    "fix": {
+      "precision": 1.0,
+      "recall": 0.667,
+      "f1": 0.8,
+      "support": 6
+    },
+    "perf": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 3
+    },
+    "refactor": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 5
+    },
+    "docs": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 2
+    },
+    "test": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 2
+    },
+    "build": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 3
+    },
+    "breaking": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 2
+    },
+    "chore": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 0
+    }
+  },
+  "rationale_recall": 1.0,
+  "rationale_false_positives": 0,
+  "raw_chars": 3194,
+  "output_chars": 3485,
+  "entries_written": 30,
+  "collect_ms": 5.0,
+  "process_ms": 2.1,
+  "baseline": {
+    "noise_in_output": 10,
+    "entries_with_reason": 0,
+    "categories": 0
+  }
+}

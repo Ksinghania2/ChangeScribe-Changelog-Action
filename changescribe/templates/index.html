@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChangeScribe - changelogs from commit history</title>
+<style>
+  :root { --bg:#f6f7fb; --card:#fff; --ink:#1c2333; --muted:#667085; --brand:#4f46e5; --line:#e4e7ec; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); }
+  header { background:linear-gradient(120deg,#4338ca,#7c3aed); color:#fff; padding:36px 20px; text-align:center; }
+  header h1 { margin:0 0 6px; font-size:2rem; letter-spacing:-.5px; }
+  header p { margin:0; opacity:.9; }
+  main { max-width:880px; margin:-24px auto 48px; padding:0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px; box-shadow:0 4px 18px rgba(16,24,40,.06); margin-bottom:20px; }
+  form { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  label { font-size:.85rem; color:var(--muted); display:block; margin-bottom:4px; font-weight:600; }
+  input, select { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:9px; font:inherit; background:#fff; }
+  .full { grid-column:1 / -1; }
+  button { background:var(--brand); color:#fff; border:0; padding:11px 20px; border-radius:9px; font:inherit; font-weight:600; cursor:pointer; }
+  button:hover { filter:brightness(1.1); }
+  .err { background:#fef3f2; border:1px solid #fecdca; color:#b42318; padding:12px 14px; border-radius:9px; }
+  .meta { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  .pill { background:#eef2ff; color:#3730a3; border-radius:99px; padding:3px 12px; font-size:.82rem; font-weight:600; }
+  .out h2 { margin-top:0; } .out h3 { margin:22px 0 6px; color:#3730a3; border-bottom:1px solid var(--line); padding-bottom:4px; }
+  .out ul { padding-left:22px; } .out li { margin:4px 0; } .out li li { color:var(--muted); font-size:.93rem; }
+  details summary { cursor:pointer; color:var(--brand); font-weight:600; }
+  pre { background:#0f172a; color:#e2e8f0; padding:14px; border-radius:9px; overflow:auto; font-size:.85rem; white-space:pre-wrap; }
+  .hint { color:var(--muted); font-size:.85rem; margin-top:8px; }
+  @media (max-width:640px){ form{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<header>
+  <h1>ChangeScribe</h1>
+  <p>Understands <em>why</em> your code changed and writes the changelog for you.</p>
+</header>
+<main>
+  <div class="card">
+    <form method="post" action="/">
+      <div class="full"><label for="repo">GitHub repository</label>
+        <input id="repo" name="repo" placeholder="owner/name  (e.g. pallets/flask)" value="{{ form.repo }}" required></div>
+      <div><label for="since">Time window</label>
+        <input id="since" name="since" placeholder="14d, 2w, 2026-10-01" value="{{ form.since }}"></div>
+      <div><label for="release">Release heading</label>
+        <input id="release" name="release" value="{{ form.release }}"></div>
+      <div><label for="backend">Writer</label>
+        <select id="backend" name="backend">
+          <option value="auto" {{ 'selected' if form.backend=='auto' }}>Auto ({{ 'LLM' if llm else 'offline heuristic' }})</option>
+          <option value="heuristic" {{ 'selected' if form.backend=='heuristic' }}>Offline heuristic</option>
+          <option value="anthropic" {{ 'selected' if form.backend=='anthropic' }}>LLM (needs ANTHROPIC_API_KEY)</option>
+        </select></div>
+      <div style="align-self:end"><button type="submit">Generate changelog</button></div>
+    </form>
+    <p class="hint">Reads merged pull requests (with review discussion) and direct commits from the public GitHub API.</p>
+  </div>
+
+  {% if error %}<div class="card err">{{ error }}</div>{% endif %}
+
+  {% if result %}
+  <div class="card out">
+    <div class="meta">
+      <span class="pill">writer: {{ result.backend }}</span>
+      <span class="pill">{{ result.raw }} items read</span>
+      <span class="pill">{{ result.kept }} entries written</span>
+    </div>
+    {{ result.html|safe }}
+    <details><summary>Copy as Markdown</summary><pre>{{ result.markdown }}</pre></details>
+  </div>
+  {% endif %}
+</main>
+</body>
+</html>

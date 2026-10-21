@@ -1,0 +1,13 @@
+# One-click deploy of the web UI on Render (https://render.com) - connect the GitHub repo.
+services:
+  - type: web
+    name: changescribe
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn changescribe.webapp:app --bind 0.0.0.0:$PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
