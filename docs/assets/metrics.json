@@ -70,8 +70,8 @@
   "raw_chars": 3194,
   "output_chars": 3485,
   "entries_written": 30,
-  "collect_ms": 5.0,
-  "process_ms": 2.1,
+  "collect_ms": 5.5,
+  "process_ms": 2.5,
   "baseline": {
     "noise_in_output": 10,
     "entries_with_reason": 0,
