@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "changescribe"
-version = "1.0.0"
+version = "1.1.0"
 description = "Generate human-readable changelogs and README updates from git commit and pull-request history."
 readme = "README.md"
 requires-python = ">=3.9"

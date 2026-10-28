@@ -25,6 +25,15 @@ inputs:
   github-token:
     description: "Token used to read PRs and comments"
     default: ${{ github.token }}
+  since-tag:
+    description: "Git tag or ref to start from (local repos only)"
+    default: ""
+  until-tag:
+    description: "Git tag or ref to stop at (local repos only)"
+    default: ""
+  config:
+    description: "Path to a changescribe config file (optional)"
+    default: ""
 runs:
   using: composite
   steps:
@@ -45,4 +54,7 @@ runs:
               --release "${{ inputs.release }}" --backend "${{ inputs.backend }}")
         [ -n "${{ inputs.changelog }}" ] && ARGS+=(--changelog "${{ inputs.changelog }}")
         [ -n "${{ inputs.readme }}" ] && ARGS+=(--readme "${{ inputs.readme }}")
+        [ -n "${{ inputs.since-tag }}" ] && ARGS+=(--since-tag "${{ inputs.since-tag }}")
+        [ -n "${{ inputs.until-tag }}" ] && ARGS+=(--until-tag "${{ inputs.until-tag }}")
+        [ -n "${{ inputs.config }}" ] && export CHANGESCRIBE_CONFIG="${{ inputs.config }}"
         python -m changescribe "${ARGS[@]}"
