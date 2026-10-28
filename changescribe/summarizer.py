@@ -10,14 +10,16 @@ from __future__ import annotations
 import json
 import os
 import re
-from typing import List, Optional
+from typing import Iterable, List, Optional
 
 import requests
 
+from .config import load_config
 from .models import CATEGORIES, Change, Entry
 from .parser import chunk
 
 DEFAULT_MODEL = "claude-sonnet-5-5"
+CONFIG = load_config()
 
 SYSTEM_PROMPT = """You are a technical writer who maintains a project's changelog.
 You receive a JSON list of changes made during a sprint. Each has: id, category, scope,
@@ -32,6 +34,27 @@ Rules:
 - Keep "category" as given unless it is clearly wrong; allowed values: %s.
 - Keep "refs" exactly as the input ids (and issue numbers if present).
 Return ONLY a JSON array of objects with keys: category, summary, impact, refs, scope.""" % ", ".join(CATEGORIES)
+
+
+def _grounding_validator(item: dict, change: Change) -> bool:
+    """Reject LLM output when it claims facts or refs not grounded in the source."""
+    text = " ".join(filter(None, [change.title, change.body, *change.discussion])).lower()
+    summary = str(item.get("summary", "")).lower()
+    impact = str(item.get("impact", "")).lower()
+    refs = [str(r) for r in item.get("refs", [])]
+
+    if refs and any(ref not in text and ref not in change.id for ref in refs):
+        return False
+    for candidate in [summary, impact]:
+        if not candidate:
+            continue
+        if any(word in candidate for word in ["because", "so that", "due to", "since", "while", "when", "caused", "prevent"]):
+            if not any(word in text for word in ["because", "so that", "due to", "since", "caused", "prevent"]):
+                return False
+        if len(candidate) > 0 and not any(token in text for token in re.findall(r"[A-Za-z][A-Za-z0-9_-]{2,}", candidate)):
+            if candidate not in text:
+                return False
+    return True
 
 
 class Summarizer:
@@ -105,9 +128,17 @@ class AnthropicSummarizer(Summarizer):
                 "issues": c.issues, "breaking": c.breaking} for c in group], ensure_ascii=False)
             try:
                 items = self._parse(self._call(payload))
-                for it in items:
-                    cat = it.get("category", "chore")
-                    entries.append(Entry(category=cat if cat in CATEGORIES else "chore",
+                for change, it in zip(group, items):
+                    if not isinstance(it, dict):
+                        entries.extend(self.fallback.summarize([change]))
+                        continue
+                    cat = str(it.get("category", change.category)).strip()
+                    if cat not in CATEGORIES:
+                        cat = "chore"
+                    if not _grounding_validator(it, change):
+                        entries.extend(self.fallback.summarize([change]))
+                        continue
+                    entries.append(Entry(category=cat,
                                          summary=str(it.get("summary", "")).strip(),
                                          impact=str(it.get("impact", "")).strip(),
                                          refs=[str(r) for r in it.get("refs", [])],

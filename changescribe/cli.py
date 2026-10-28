@@ -20,6 +20,8 @@ def build_parser() -> argparse.ArgumentParser:
     src.add_argument("--github", metavar="OWNER/NAME", help="read from the GitHub API instead")
     g.add_argument("--since", default="14d", help="14d, 2w, 36h or ISO date (default 14d)")
     g.add_argument("--until", default=None)
+    g.add_argument("--since-tag", default=None, help="git tag or ref to start from (local repos)")
+    g.add_argument("--until-tag", default=None, help="git tag or ref to stop at (local repos)")
     g.add_argument("--branch", default=None, help="branch / rev range to read")
     g.add_argument("--backend", choices=["auto", "anthropic", "heuristic"], default="auto")
     g.add_argument("--release", default="Unreleased", help="version heading, e.g. 1.2.0")
@@ -42,7 +44,8 @@ def main(argv=None) -> int:
     try:
         res = pipeline.run(repo_path=args.repo, github_repo=args.github, since=args.since,
                            until=args.until, token=token, backend=args.backend, version=args.release,
-                           branch=args.branch, include_minor=not args.no_minor)
+                           branch=args.branch, include_minor=not args.no_minor,
+                           since_tag=args.since_tag, until_tag=args.until_tag)
     except (RuntimeError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

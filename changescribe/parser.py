@@ -7,8 +7,9 @@ and review discussion, drop noise, and pack the result into token-bounded chunks
 from __future__ import annotations
 
 import re
-from typing import Iterable, List
+from typing import Iterable, List, Optional
 
+from .config import ClassificationConfig, load_config
 from .models import Change
 
 CONVENTIONAL = re.compile(
@@ -20,24 +21,10 @@ TYPE_MAP = {"feat": "feature", "feature": "feature", "fix": "fix", "perf": "perf
             "tests": "test", "build": "build", "ci": "build", "chore": "chore",
             "style": "chore", "revert": "fix"}
 
-KEYWORDS = [   # (category, regex) - first match wins, used when no conventional prefix
-    ("fix", r"\b(fix(es|ed)?|bug|crash(es)?|broken|regression|hotfix|race condition|resolve[sd]?)\b"),
-    ("perf", r"\b(speed ?up|faster|performance|optimi[sz]e[sd]?|cach(e|ing)|latency|reduce[sd]? (memory|time))\b"),
-    ("test", r"\b(unit tests?|tests?|coverage|pytest|unittest)\b"),
-    ("docs", r"\b(readme|docs?|documentation|changelog)\b"),
-    ("build", r"\b(ci|workflow|docker|dependenc(y|ies)|bump|upgrade|pipeline|deps)\b"),
-    ("refactor", r"\b(refactor(ed)?|rename[sd]?|restructure[sd]?|clean ?up|tidy|simplif(y|ied)|extract(ed)?|move[sd]?)\b"),
-    ("feature", r"\b(add(s|ed)?|implement(s|ed)?|introduce[sd]?|support(s|ed)?|new|create[sd]?|enable[sd]?|can now)\b"),
-]
-
-NOISE_TITLE = re.compile(
-    r"^(merge (branch|pull request|remote)|wip\b|fixup!|squash!|update readme\.md$|initial commit$|"
-    r"bump version|release \d|\.+$|minor$|typo$|formatting$|lint$)", re.I)
-
-RATIONALE_CUES = re.compile(
-    r"\b(because|so that|in order to|due to|since|to avoid|to prevent|to allow|to make|to fix|"
-    r"previously|used to|instead of|this (change|fixes|means)|which (means|caused|led)|"
-    r"users? (can|could|were|had)|was (causing|failing|slow)|otherwise)\b", re.I)
+DEFAULT_CONFIG = load_config()
+KEYWORDS = DEFAULT_CONFIG.keywords
+NOISE_TITLE = re.compile("|".join(DEFAULT_CONFIG.noise_patterns), re.I)
+RATIONALE_CUES = re.compile(DEFAULT_CONFIG.rationale_cues, re.I)
 
 ISSUE_REF = re.compile(r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)?\s*#(\d+)", re.I)
 BREAKING_BODY = re.compile(r"^BREAKING[ -]CHANGE:\s*(.+)$", re.I | re.M)
@@ -45,9 +32,7 @@ TRAILER = re.compile(r"^(signed-off-by|co-authored-by|reviewed-by|change-id):", 
 CODE_FENCE = re.compile(r"```.*?```", re.S)
 HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
 
-PATH_HINTS = [("docs", r"(^|/)(docs?|README|CHANGELOG)|\.md$|\.rst$"),
-              ("test", r"(^|/)(tests?|__tests__|spec)/|(_test|\.test|\.spec)\."),
-              ("build", r"(^|/)(\.github|Dockerfile|requirements|package(-lock)?\.json|pyproject|Makefile)")]
+PATH_HINTS = DEFAULT_CONFIG.path_hints
 
 
 def _sentences(text: str) -> List[str]:
@@ -58,16 +43,20 @@ def _sentences(text: str) -> List[str]:
     return [s.strip() for s in re.split(r"(?<=[.!?])\s+", joined) if len(s.strip()) > 15]
 
 
-def extract_rationale(change: Change, max_sentences: int = 2) -> str:
+def extract_rationale(change: Change, max_sentences: int = 2, config: Optional[ClassificationConfig] = None) -> str:
     """Pick the sentences that explain *why*: body/PR text first, then discussion."""
+    cfg = config or DEFAULT_CONFIG
+    cues = re.compile(cfg.rationale_cues, re.I)
     pool = _sentences(change.body) + [s for c in change.discussion for s in _sentences(c)]
-    cued = [s for s in pool if RATIONALE_CUES.search(s)]
+    cued = [s for s in pool if cues.search(s)]
     chosen = (cued or pool)[:max_sentences]
     return " ".join(chosen)[:400]
 
 
-def is_noise(change: Change) -> bool:
-    if NOISE_TITLE.search(change.title.strip()):
+def is_noise(change: Change, config: Optional[ClassificationConfig] = None) -> bool:
+    cfg = config or DEFAULT_CONFIG
+    pattern = re.compile("|".join(cfg.noise_patterns), re.I)
+    if pattern.search(change.title.strip()):
         return True
     if change.title.lower().startswith("revert \"merge"):
         return True
@@ -76,7 +65,8 @@ def is_noise(change: Change) -> bool:
     return False
 
 
-def classify(change: Change) -> Change:
+def classify(change: Change, config: Optional[ClassificationConfig] = None) -> Change:
+    cfg = config or DEFAULT_CONFIG
     title = change.title.strip()
     m = CONVENTIONAL.match(title)
     if m:
@@ -94,9 +84,9 @@ def classify(change: Change) -> Change:
             change.category = label_hit
         else:
             low = title.lower()
-            change.category = next((cat for cat, rx in KEYWORDS if re.search(rx, low)), None) or ""
+            change.category = next((cat for cat, rx in cfg.keywords if re.search(rx, low)), None) or ""
             if not change.category:
-                change.category = _from_paths(change.files) or "chore"
+                change.category = _from_paths(change.files, config=cfg) or cfg.default_category
     if BREAKING_BODY.search(change.body) or "breaking" in [l.lower() for l in change.labels]:
         change.breaking = True
     if change.breaking:
@@ -105,26 +95,28 @@ def classify(change: Change) -> Change:
             change.rationale = mb.group(1).strip()
     change.issues = sorted({f"#{n}" for n in ISSUE_REF.findall(f"{change.title} {change.body}")})
     if not change.rationale:
-        change.rationale = extract_rationale(change)
+        change.rationale = extract_rationale(change, config=cfg)
     return change
 
 
-def _from_paths(files: Iterable[str]) -> str:
+def _from_paths(files: Iterable[str], config: Optional[ClassificationConfig] = None) -> str:
+    cfg = config or DEFAULT_CONFIG
     files = list(files)
     if not files:
         return ""
-    for cat, rx in PATH_HINTS:
+    for cat, rx in cfg.path_hints:
         if all(re.search(rx, f) for f in files):
             return cat
     return ""
 
 
-def process(changes: List[Change], drop_noise: bool = True) -> List[Change]:
+def process(changes: List[Change], drop_noise: bool = True, config: Optional[ClassificationConfig] = None) -> List[Change]:
+    cfg = config or DEFAULT_CONFIG
     out = []
     for ch in changes:
-        if drop_noise and is_noise(ch):
+        if drop_noise and is_noise(ch, config=cfg):
             continue
-        out.append(classify(ch))
+        out.append(classify(ch, config=cfg))
     return out
 
 

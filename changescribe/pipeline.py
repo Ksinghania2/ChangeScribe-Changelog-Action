@@ -6,6 +6,7 @@ from datetime import date
 from typing import List, Optional
 
 from . import collector, parser, renderer
+from .config import ClassificationConfig, load_config
 from .models import Change, Entry
 from .summarizer import Summarizer, get_summarizer
 
@@ -23,16 +24,19 @@ def run(*, repo_path: Optional[str] = None, github_repo: Optional[str] = None,
         since: Optional[str] = "14d", until: Optional[str] = None, token: Optional[str] = None,
         backend: str = "auto", version: str = "Unreleased", branch: Optional[str] = None,
         include_minor: bool = True, summarizer: Optional[Summarizer] = None,
-        changes: Optional[List[Change]] = None) -> Result:
+        changes: Optional[List[Change]] = None, since_tag: Optional[str] = None,
+        until_tag: Optional[str] = None, config: Optional[ClassificationConfig] = None) -> Result:
+    cfg = config or load_config()
     since_dt, until_dt = collector.parse_since(since), collector.parse_since(until)
     if changes is None:
         if github_repo:
             changes = collector.collect_github(github_repo, since_dt, until_dt, token=token, branch=branch)
         else:
             changes = collector.collect_local(repo_path or ".", since_dt, until_dt,
-                                              rev_range=branch or "HEAD")
+                                              rev_range=branch or "HEAD",
+                                              since_tag=since_tag, until_tag=until_tag)
     raw = len(changes)
-    processed = parser.process(changes)
+    processed = parser.process(changes, config=cfg)
     summ = summarizer or get_summarizer(backend)
     entries = summ.summarize(processed)
     links = {c.id: c.url for c in processed if c.url}

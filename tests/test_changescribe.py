@@ -187,6 +187,17 @@ class CollectorTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             gh.get("/repos/none/none")
 
+    def test_github_auth_header(self):
+        gh = collector.GitHubClient(token="abc123")
+        self.assertEqual(gh.s.headers["Authorization"], "token abc123")
+
+    def test_tag_ranges_and_dedupe(self):
+        self.assertEqual(collector.resolve_rev_range("HEAD", "v1", "v2"), "v1..v2")
+        self.assertEqual(collector.resolve_rev_range("main", since_tag="v1"), "v1..main")
+        gh = collector.GitHubClient(session=FakeGitHub())
+        ch = collector.collect_github("o/r", collector.parse_since("7d"), client=gh, dedupe=True)
+        self.assertEqual([c.id for c in ch], ["PR#7", "d2"[:7]])
+
 
 class SummarizerTests(unittest.TestCase):
     def changes(self):
@@ -249,7 +260,13 @@ class PipelineAndWebTests(unittest.TestCase):
     def test_web(self):
         from changescribe.webapp import create_app
         c = create_app().test_client()
-        self.assertEqual(c.get("/").status_code, 200)
+        page = c.get("/")
+        self.assertEqual(page.status_code, 200)
+        html = page.get_data(as_text=True)
+        self.assertIn('role="tablist"', html)
+        self.assertIn('data-copy-target="changelog-markdown"', html)
+        self.assertIn('data-repo="pallets/flask"', html)
+        self.assertIn('id="theme-toggle"', html)
         self.assertEqual(c.get("/healthz").get_json()["status"], "ok")
         r = c.post("/", data={"repo": "not a repo"})
         self.assertIn("owner/name", r.get_data(as_text=True))

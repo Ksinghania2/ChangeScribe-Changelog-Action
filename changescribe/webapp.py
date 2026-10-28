@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import os
+import re
+from urllib.parse import urlparse
 
 from flask import Flask, jsonify, render_template, request
 
@@ -10,6 +12,11 @@ from . import pipeline, renderer
 
 def create_app() -> Flask:
     app = Flask(__name__)
+    app.config.update(
+        DEBUG=False,
+        TESTING=False,
+        MAX_CONTENT_LENGTH=1_048_576,
+    )
 
     @app.get("/")
     def index():
@@ -33,8 +40,8 @@ def create_app() -> Flask:
                       "backend": res.backend, "raw": res.raw_count, "kept": len(res.entries)}
         except (ValueError, RuntimeError) as exc:
             error = str(exc)
-        except Exception as exc:  # network / API problems should show up as a message, not a 500
-            error = f"Could not reach GitHub: {exc}"
+        except Exception as exc:
+            error = "The GitHub request failed. Please verify the repository name and try again."
         return render_template("index.html", result=result, form=form, error=error,
                                llm=bool(os.environ.get("ANTHROPIC_API_KEY")))
 
@@ -42,12 +49,26 @@ def create_app() -> Flask:
     def health():
         return jsonify(status="ok")
 
+    @app.after_request
+    def add_security_headers(response):
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; object-src 'none'"
+        return response
+
     return app
 
 
 def _valid_repo(value: str) -> bool:
-    import re
-    return bool(re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", value or ""))
+    if not value or len(value) > 200:
+        return False
+    if re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", value or "") is None:
+        return False
+    if value.startswith("http://") or value.startswith("https://"):
+        return False
+    parsed = urlparse(value)
+    return not parsed.scheme and not parsed.netloc and "/" in value
 
 
 app = create_app()
