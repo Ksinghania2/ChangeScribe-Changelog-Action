@@ -165,3 +165,19 @@ python -m pytest -q          # or: python -m unittest discover -s tests
 ## License
 
 MIT
+
+<!-- changescribe:start -->
+## Recent changes
+
+This period: 1 added, 1 maintenance.
+
+## [Unreleased] - 2026-11-09
+
+### Added
+
+- Config-driven classification, tag ranges, auth, security headers, web UI redesign. ([84e699d](https://github.com/Ksinghania2/ChangeScribe-Changelog-Action/commit/84e699d2c3487bd878340f40afcbad5da81d1700))
+
+### Maintenance
+
+- Finalize project - bump to 1.1.0, changelog, action inputs. ([657a243](https://github.com/Ksinghania2/ChangeScribe-Changelog-Action/commit/657a243fa84ba70213f360da00c03026a5fcf64b))
+<!-- changescribe:end -->
