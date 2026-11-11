@@ -1,47 +1,37 @@
 # ChangeScribe-Changelog-Action
 
-A GitHub Action that generates changelog entries from repository changes.
+A GitHub Action for learning about automated changelogs.
 
-## Overview
-This GitHub Action automatically generates changelog entries based on repository events such as pulls, issues, and commits. It integrates with the scribe CLI to provide structured changelog generation.
+## What It Does
+This GitHub Action automatically creates changelog entries when you make changes to your repository.
 
-## Features
-- Automatic changelog generation from pull requests
-- Support for issue tags and labels
-- Integration with scribe for structured output
-- CI/CD friendly
-- Configurable via action inputs
+## How It Works
+1. A pull request gets created
+2. The action looks at what changed
+3. It adds an entry to your changelog
 
-## Inputs
-| Parameter | Description | Required |
-|-----------|-------------|----------|
-| `github-token` | GitHub token for API access | No |
-| `scribe-config` | Path to scribe configuration file | No |
-
-## Usage
+## Basic Usage
 ```yaml
 name: Generate Changelog
 on:
   pull_request:
-    types: [opened, edited, reopened, closed]
 jobs:
   changelog:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Generate Changelog
-        uses: Ksinghania2/ChangeScribe-Changelog-Action@v1
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v2
+      - uses: Ksinghania2/ChangeScribe-Changelog-Action@v1
 ```
 
-## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Learn More
+- Search online for "GitHub Actions changelog"
+- Try creating a pull request
+- See the changelog update
 
 ## Topics
-- changelog
-- ci-cd
-- developer-tools
-- github-action
-- release-automation
-```
+- automation
+- GitHub
+- scripts
+
+## Author
+Learning project
