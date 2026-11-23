@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased] - 2026-11-23
+
+### Fixed
+
+- Add bug report issue template. ([0658ecc](https://github.com/Ksinghania2/ChangeScribe-Changelog-Action/commit/0658ecc12e4da67bdeb5bb9135a0578db8b4a75d))
+
+### Documentation
+
+- Add comprehensive README.md. ([59d9ab1](https://github.com/Ksinghania2/ChangeScribe-Changelog-Action/commit/59d9ab14ef5f82ddf12e3ac5f5fdd5a2fa50e65f))
+- Simplify README for undergraduate audience. ([a842c6b](https://github.com/Ksinghania2/ChangeScribe-Changelog-Action/commit/a842c6bef1ba1486b38097c03dc5dd69d9dba7e8))
+
+### Tests
+
+- Add test CI workflow for GitHub Action. ([d9e59b6](https://github.com/Ksinghania2/ChangeScribe-Changelog-Action/commit/d9e59b6988d71372f815ee211163b1e4e1d54ff3))
+- Simplify test CI workflow. ([cc8a19d](https://github.com/Ksinghania2/ChangeScribe-Changelog-Action/commit/cc8a19df03a501cbb5161eb8ca08428ce81de98c))
+
 ## [1.1.0] - 2026-10-28
 
 ### Added
